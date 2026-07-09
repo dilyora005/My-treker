@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мой день</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #EDEFE8;
+    --card: #FBFCF9;
+    --ink: #2F3A34;
+    --ink-soft: #6B7A72;
+    --teal: #4E7D6D;
+    --teal-deep: #33564A;
+    --plum: #8C5A73;
+    --gold: #D9A54A;
+    --line: #DCE0D6;
+    --done-bg: #E4EEE7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); font-family: 'Manrope', sans-serif;
+    color: var(--ink); min-height: 100vh; padding-bottom: 70px;
+  }
+  .wrap { max-width: 660px; margin: 0 auto; padding: 22px 18px 20px; }
+  header { margin-bottom: 16px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 600; margin: 0 0 4px; color: var(--teal-deep); }
+
+  /* Tabs */
+  .tabbar {
+    display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 14px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0; padding: 9px 15px; border-radius: 20px; border: 1.5px solid var(--line);
+    background: var(--card); color: var(--ink-soft); font-size: 13.5px; font-weight: 600;
+    cursor: pointer; font-family: 'Manrope', sans-serif; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn.active { background: var(--teal-deep); border-color: var(--teal-deep); color: white; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Schedule (reused) */
+  .date-nav { display: flex; align-items: center; gap: 12px; margin: 10px 0 16px; }
+  .date-nav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--teal-deep); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .date-nav button:hover { background: var(--done-bg); }
+  .date-label { font-family: 'Fraunces', serif; font-size: 16px; flex: 1; text-align: center; }
+  .date-label .today-tag { font-family: 'Manrope', sans-serif; font-size: 11px; color: var(--gold); display: block; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+
+  .progress-ring-wrap { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 20px; padding: 16px 18px; margin-bottom: 18px; border: 1px solid var(--line); }
+  .progress-text .big { font-family: 'Fraunces', serif; font-size: 20px; color: var(--teal-deep); font-weight: 600; }
+  .progress-text .small { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-soft); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .timeline { position: relative; }
+  .slot { display: flex; gap: 12px; margin-bottom: 10px; }
+  .slot-time { width: 48px; flex-shrink: 0; text-align: right; padding-top: 13px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .slot-time.done-time { color: #A9B5AD; }
+  .slot-line { width: 2px; background: var(--line); flex-shrink: 0; position: relative; margin-top: 4px; }
+  .slot-dot { position: absolute; top: 12px; left: -4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--card); }
+  .slot-card { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 2px; }
+  .slot-card:hover { background: #F5F7F2; }
+  .slot-card.done { background: var(--done-bg); }
+  .checkbox { width: 21px; height: 21px; border-radius: 7px; border: 2px solid var(--teal); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .slot-card.done .checkbox { background: var(--teal); }
+  .checkbox svg { width: 12px; height: 12px; opacity: 0; }
+  .slot-card.done .checkbox svg { opacity: 1; }
+  .item-body { flex: 1; min-width: 0; }
+  .item-label { font-size: 14px; line-height: 1.35; }
+  .slot-card.done .item-label { color: var(--ink-soft); text-decoration: line-through; }
+  .item-cat { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .delete-btn { background: none; border: none; color: var(--ink-soft); font-size: 15px; cursor: pointer; padding: 2px 4px; opacity: 0; flex-shrink: 0; }
+  .slot-card:hover .delete-btn { opacity: 0.55; }
+  .delete-btn:hover { opacity: 1 !important; color: var(--plum); }
+
+  .add-panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-top: 16px; }
+  .add-panel-title { font-family: 'Fraunces', serif; font-size: 14px; color: var(--teal-deep); margin-bottom: 10px; font-weight: 600; }
+  .add-grid { display: grid; grid-template-columns: 76px 1fr; gap: 8px; margin-bottom: 8px; }
+  .add-panel input[type="time"], .add-panel input[type="text"] { border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font-family: 'Manrope', sans-serif; font-size: 14px; background: #fff; color: var(--ink); width: 100%; }
+  .cat-select { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cat-chip { font-size: 12px; padding: 6px 11px; border-radius: 20px; border: 1.5px solid var(--line); background: #fff; color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .cat-chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .add-panel button.submit { width: 100%; background: var(--teal); color: white; border: none; border-radius: 10px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .add-panel button.submit:hover { background: var(--teal-deep); }
+
+  .notes-box { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-top: 16px; }
+  .notes-box-title { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: var(--teal-deep); margin-bottom: 8px; }
+  .notes-box textarea { width: 100%; border: none; resize: vertical; min-height: 60px; font-family: 'Manrope', sans-serif; font-size: 14px; color: var(--ink); background: transparent; outline: none; line-height: 1.5; }
+
+  .status-msg { text-align: center; font-size: 12px; color: var(--ink-soft); margin-top: 16px; }
+  .empty-msg { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 26px 10px; }
+  .loading { text-align: center; padding: 60px 20px; color: var(--ink-soft); }
+
+  /* Sub-tabs (recipes: me/husband) */
+  .subtabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .subtab-btn { flex: 1; padding: 9px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink-soft); font-weight: 600; font-size: 13px; cursor: pointer; }
+  .subtab-btn.active { background: var(--teal); border-color: var(--teal); color: white; }
+
+  /* Accordion cards for recipes/exercises/baby */
+  .acc-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+  .acc-head { padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; gap: 10px; }
+  .acc-head:hover { background: #F5F7F2; }
+  .acc-title { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; color: var(--teal-deep); }
+  .acc-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .acc-arrow { font-size: 13px; color: var(--ink-soft); transition: transform 0.2s ease; flex-shrink: 0; }
+  .acc-card.open .acc-arrow { transform: rotate(180deg); }
+  .acc-body { display: none; padding: 0 15px 15px; font-size: 13.5px; line-height: 1.6; color: var(--ink); }
+  .acc-card.open .acc-body { display: block; }
+  .acc-body b { color: var(--teal-deep); }
+  .acc-body ul { margin: 6px 0; padding-left: 18px; }
+  .acc-body li { margin-bottom: 3px; }
+  .badge { display: inline-block; font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--done-bg); color: var(--teal-deep); font-weight: 700; margin-left: 6px; }
+  .badge.plum { background: #F3E7EE; color: var(--plum); }
+  .badge.gold { background: #FBF0DA; color: #A87A22; }
+
+  .section-lead { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 14px; line-height: 1.5; }
+  .subhead { font-family: 'Fraunces', serif; font-size: 15px; color: var(--teal-deep); font-weight: 600; margin: 18px 0 10px; }
+
+  /* English tab */
+  .link-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; }
+  .link-card .name { font-weight: 700; font-size: 14px; color: var(--ink); }
+  .link-card .desc { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.5; }
+
+  .vocab-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .vocab-row input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 14px; background: #fff; }
+  .vocab-row button { background: var(--teal); color: white; border: none; border-radius: 10px; padding: 0 16px; font-weight: 600; cursor: pointer; }
+  .vocab-item { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px; margin-bottom: 7px; font-size: 13.5px; }
+  .vocab-item .del { color: var(--ink-soft); background: none; border: none; cursor: pointer; font-size: 14px; }
+  .vocab-item .del:hover { color: var(--plum); }
+
+  .stage-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; margin-bottom: 8px; cursor: pointer; }
+  .stage-row:hover { background: #F5F7F2; }
+  .stage-row.done { background: var(--done-bg); }
+  .stage-check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--teal); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .stage-row.done .stage-check { background: var(--teal); }
+  .stage-check svg { width: 11px; height: 11px; opacity: 0; }
+  .stage-row.done .stage-check svg { opacity: 1; }
+  .stage-name { font-size: 13.5px; flex: 1; }
+  .stage-row.done .stage-name { text-decoration: line-through; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="loading">Загружаю…</div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+
+const CATEGORIES = [
+  { key: 'baby', title: 'Малыш', color: '#D9A54A' },
+  { key: 'diastasis', title: 'Диастаз', color: '#8C5A73' },
+  { key: 'english', title: 'Английский', color: '#4E7D6D' },
+  { key: 'cooking', title: 'Готовка', color: '#33564A' },
+  { key: 'other', title: 'Другое', color: '#6B7A72' },
+];
+function catByKey(key) { return CATEGORIES.find(c => c.key === key) || CATEGORIES[CATEGORIES.length-1]; }
+
+const DEFAULT_SCHEDULE = [
+  { time: '07:00', label: 'Подъём, кормление, завтрак', cat: 'baby' },
+  { time: '08:00', label: 'Дыхание на диастаз', cat: 'diastasis' },
+  { time: '08:30', label: 'Прогулка утренняя', cat: 'baby' },
+  { time: '09:00', label: 'Видео английского', cat: 'english' },
+  { time: '09:30', label: 'Готовка впрок на день', cat: 'cooking' },
+  { time: '10:00', label: 'Игры с малышом', cat: 'baby' },
+  { time: '12:00', label: 'Обед', cat: 'cooking' },
+  { time: '14:00', label: 'Упражнения на кор', cat: 'diastasis' },
+  { time: '14:30', label: 'Повторение английского', cat: 'english' },
+  { time: '17:00', label: 'Прогулка вечерняя', cat: 'baby' },
+  { time: '18:30', label: 'Ужин (узбекская кухня для мужа)', cat: 'cooking' },
+  { time: '20:00', label: 'Купание малыша', cat: 'baby' },
+  { time: '21:00', label: 'Английский — 10 минут', cat: 'english' },
+];
+
+const RECIPES_ME = [
+  { day: 'День 1', tag: '~1350 ккал', items: [
+    { title: 'Завтрак — овсянка с бананом', body: 'Овсяные хлопья (50 г) залить кипятком/молоком, добавить нарезанный банан и ложку мёда. 5 минут.' },
+    { title: 'Перекус — творог с ягодами', body: 'Творог 150 г с горстью свежих или замороженных ягод.' },
+    { title: 'Обед — гречка с курицей', body: 'Отварная гречка (150 г) + отварная куриная грудка (120 г) + огурец и помидор, полить оливковым маслом.' },
+    { title: 'Перекус — яблоко и миндаль', body: 'Яблоко + 10 миндальных орехов.' },
+    { title: 'Ужин — омлет с овощами', body: '2 яйца взбить, вылить на сковороду с кабачком и болгарским перцем, жарить под крышкой 7 минут.' },
+  ]},
+  { day: 'День 2', tag: '~1300 ккал', items: [
+    { title: 'Завтрак — творожная запеканка', body: 'Творог 200 г + 1 яйцо + 1 ст.л. манки, перемешать, жарить под крышкой 8-10 минут на слабом огне.' },
+    { title: 'Перекус — банан', body: '' },
+    { title: 'Обед — куриный суп-пюре', body: 'Отварить курицу с морковью и луком, пробить блендером с частью бульона. 10 минут, если бульон готов заранее.' },
+    { title: 'Перекус — йогурт с отрубями', body: 'Йогурт без сахара + ложка овсяных отрубей.' },
+    { title: 'Ужин — гречка с курицей', body: 'Остатки со вчера + тушёная капуста.' },
+  ]},
+  { day: 'День 3', tag: '~1350 ккал', items: [
+    { title: 'Завтрак — яичница с помидорами', body: '2 яйца, нарезанный помидор — жарить вместе 5-7 минут.' },
+    { title: 'Перекус — творог с мёдом', body: '' },
+    { title: 'Обед — куриные котлеты + рис', body: 'Фарш из куриной грудки + лук + яйцо, слепить котлеты, готовить на пару 15 минут. Сделайте двойную порцию про запас.' },
+    { title: 'Перекус — груша или яблоко', body: '' },
+    { title: 'Ужин — овощное рагу', body: 'Кабачок, морковь, лук, немного картофеля — тушить 15 минут.' },
+  ]},
+  { day: 'День 4', tag: '~1300 ккал', items: [
+    { title: 'Завтрак — овсянка с яблоком и корицей', body: '' },
+    { title: 'Перекус — орехи с курагой', body: '' },
+    { title: 'Обед — котлеты (остатки) + гречка/рис', body: 'Плюс свежие овощи.' },
+    { title: 'Перекус — творог с ягодами', body: '' },
+    { title: 'Ужин — омлет с сыром и зеленью', body: '' },
+  ]},
+  { day: 'День 5', tag: '~1350 ккал', items: [
+    { title: 'Завтрак — бутерброд + яйцо', body: 'Творожный сыр и огурец на цельнозерновом хлебе + яйцо вкрутую.' },
+    { title: 'Перекус — банан', body: '' },
+    { title: 'Обед — запечённая курица с овощами', body: 'Кабачок, морковь, лук в духовке 20 минут.' },
+    { title: 'Перекус — йогурт', body: '' },
+    { title: 'Ужин — тушёная курица с капустой', body: 'Одна сковорода, 20 минут.' },
+  ]},
+  { day: 'День 6', tag: '~1300 ккал', items: [
+    { title: 'Завтрак — творожная запеканка', body: '' },
+    { title: 'Перекус — яблоко', body: '' },
+    { title: 'Обед — куриный суп с вермишелью', body: 'Бульон + курица + мелкая вермишель + морковь, 15 минут.' },
+    { title: 'Перекус — орехи', body: '' },
+    { title: 'Ужин — яичница с овощами', body: 'Кабачок/перец/помидор.' },
+  ]},
+  { day: 'День 7', tag: '~1350 ккал', items: [
+    { title: 'Завтрак — овсянка с арахисовой пастой', body: '' },
+    { title: 'Перекус — творог с мёдом', body: '' },
+    { title: 'Обед — упрощённый плов с курицей', body: 'Курица + рис + морковь + лук, всё в одной кастрюле, тушить 25 минут.' },
+    { title: 'Перекус — груша', body: '' },
+    { title: 'Ужин — овощи гриль + пара яиц', body: '' },
+  ]},
+];
+
+const RECIPES_HUSBAND = [
+  { day: 'День 1 — Плов', tag: 'высококалорийно', items: [
+    { title: 'Ингредиенты', body: 'Баранина/говядина 600 г, рис 500 г, морковь 500 г соломкой, лук 2 шт, масло 150 мл, чеснок 1-2 головки, зира, барбарис, соль.' },
+    { title: 'Готовка (~1 час)', body: 'Обжарить мясо до корочки → добавить лук → морковь, жарить 10 мин → залить водой, тушить 30-40 мин, посолить, зира → выложить рис, залить кипятком на 1.5-2 см выше → воткнуть чеснок → варить, затем томить под крышкой 20 минут.' },
+  ]},
+  { day: 'День 2 — Лагман жареный', tag: '', items: [
+    { title: 'Ингредиенты', body: 'Говядина/баранина 400 г, лапша 400 г, болгарский перец 2 шт, редька, помидоры 3 шт, лук, чеснок, зира, кинза.' },
+    { title: 'Готовка (~40 мин)', body: 'Мясо соломкой обжарить до корочки → лук, чеснок, перец, редька, помидоры, жарить 10 мин → влить бульон, тушить 15 мин → отдельно отварить лапшу, выложить, сверху обжарку, посыпать кинзой.' },
+  ]},
+  { day: 'День 3 — Манты', tag: 'можно заморозить', items: [
+    { title: 'Ингредиенты', body: 'Тесто: мука 500 г, вода, яйцо, соль. Начинка: баранина/говядина рубленая 500 г, курдючный жир/сало 100 г, лук 3-4 шт, зира, соль, перец.' },
+    { title: 'Готовка (~50 мин)', body: 'Замесить тесто, дать отдохнуть 30 мин → мясо и лук мелко нарубить, смешать с жиром и специями → раскатать тесто, нарезать квадратами 10х10 см → слепить манты → готовить на пару 40-45 минут. Подавать со сметаной.' },
+  ]},
+  { day: 'День 4 — Шурпа', tag: 'наваристый суп', items: [
+    { title: 'Ингредиенты', body: 'Баранина на кости 600 г, картофель 4 шт, морковь 2 шт, лук 2 шт, болгарский перец, помидоры 2 шт, зира, лавровый лист.' },
+    { title: 'Готовка (~1 час)', body: 'Варить бульон 40 минут, снимая пену → добавить картофель, морковь, через 10 мин перец и помидоры → варить 15-20 минут, приправить зирой, лавровым листом.' },
+  ]},
+  { day: 'День 5 — Димляма', tag: 'тушится сама', items: [
+    { title: 'Ингредиенты', body: 'Говядина/баранина 500 г, картофель 5 шт, капуста 0.5 кочана, морковь, лук, помидоры 3 шт, болгарский перец.' },
+    { title: 'Готовка (~1 час)', body: 'Слоями в казане: мясо → лук → морковь → картофель половинками → капуста крупно → помидоры → перец. Посолить каждый слой, влить немного воды, тушить на медленном огне 50-60 минут без перемешивания.' },
+  ]},
+  { day: 'День 6 — Ковурма-лагман', tag: '', items: [
+    { title: 'Ингредиенты', body: 'Говядина 400 г, лапша 400 г, лук 3 шт, морковь, зира, перец, уксус.' },
+    { title: 'Готовка (~40 мин)', body: 'Отварить мясо до готовности, обжарить кусочками с луком до корочки → отдельно обжарить лук с морковью → отварить лапшу → всё смешать, полить бульоном, капля уксуса.' },
+  ]},
+  { day: 'День 7 — Казан-кебаб', tag: '', items: [
+    { title: 'Ингредиенты', body: 'Баранина/говядина 500 г крупными кусками, картофель 6-7 шт, лук 2 шт, помидоры 2 шт, зира, кориандр.' },
+    { title: 'Готовка (~1 час)', body: 'Обжарить мясо крупными кусками до корочки → лук кольцами 5 мин → сверху картофель дольками и помидоры кольцами → посолить, приправить, тушить под крышкой 40-45 минут без перемешивания.' },
+  ]},
+];
+
+const EXERCISES = [
+  { title: 'Диафрагмальное дыхание', tag: 'база', body: 'Лёжа: вдох — живот наполняется, выдох — втягиваете пупок к позвоночнику, задержка 3-5 сек. 10 повторов. Делать каждый день, это фундамент восстановления.' },
+  { title: 'Дыхание сидя/стоя', tag: 'база', body: 'То же самое, но в течение дня — можно делать держа малыша на руках.' },
+  { title: 'Наклон таза лёжа', tag: 'кор', body: 'Колени согнуты, на выдохе прижимаете поясницу к полу, напрягая низ живота. 3 подхода по 12 раз.' },
+  { title: '«Мёртвый жук» (облегчённый)', tag: 'кор', body: 'Лёжа, руки вверх, ноги согнуты под 90°. На выдохе медленно опускаете одну ногу, не отрывая поясницу от пола. 3х8 на каждую сторону.' },
+  { title: 'Ягодичный мостик с втягиванием', tag: 'кор', body: 'Лёжа, колени согнуты, на выдохе поднимаете таз, одновременно втягивая живот. 3 подхода по 12 раз.' },
+  { title: 'Модифицированная планка', tag: 'кор', body: 'На коленях или у стены. Держать 20-30 сек, следя, чтобы живот не выпирал куполом. Если выпирает — сократить время.' },
+  { title: 'Boat pose облегчённый', tag: 'кор', body: 'Сидя, ноги согнуты, слегка отклониться назад, руки вперёд, спина прямая (не круглая). 3 подхода по 20 секунд.' },
+  { title: 'Кошка-корова', tag: 'растяжка', body: 'На четвереньках, плавно прогибать и округлять спину синхронно с дыханием. 10 повторов.' },
+  { title: 'Растяжка косых мышц стоя', tag: 'растяжка', body: 'Руки вверх, наклон в сторону на выдохе. По 5 раз в каждую сторону.' },
+];
+const EXERCISES_AVOID = [
+  'Классические скручивания и подъёмы корпуса',
+  'Полная планка на прямых руках дольше минуты',
+  'Велосипед, двойные подъёмы ног',
+  'Любые упражнения, где живот заметно выпирает куполом или видна борозда по центру',
+];
+
+const BABY_ACTIVITIES = [
+  { title: 'Тактильные игрушки', tag: 'сенсорика', body: 'Дайте потрогать предметы разной текстуры — мягкое, шершавое, гладкое (тканевые книжки, погремушки с разной поверхностью). Развивает осязание и любопытство.' },
+  { title: 'Тайм на животике', tag: 'моторика', body: '3-5 раз в день по 5-10 минут на животике — укрепляет мышцы шеи, спины и готовит к ползанию.' },
+  { title: 'Слежение за предметом', tag: 'зрение', body: 'Медленно двигайте яркую игрушку слева направо на расстоянии 20-30 см от лица — тренирует прослеживающий взгляд.' },
+  { title: 'Игра с зеркалом', tag: 'сенсорика', body: 'Небезопасное зеркало (пластиковое) перед малышом — рассматривание своего отражения стимулирует интерес к лицам.' },
+  { title: 'Чтение вслух', tag: 'речь', body: 'Даже если малыш не понимает слов — звучание вашего голоса и интонации развивают будущую речь. 5-10 минут в день.' },
+  { title: 'Музыка и пение', tag: 'слух', body: 'Пойте простые песенки или включайте спокойную музыку — развивает слуховое восприятие и успокаивает.' },
+  { title: 'Хватание предметов', tag: 'моторика', body: 'Дайте безопасные предметы разного размера, чтобы малыш учился хватать и перекладывать из руки в руку.' },
+  { title: 'Подтягивание за ручки', tag: 'моторика', body: 'Лёжа на спине, дайте малышу схватить ваши пальцы и слегка подтяните его в сидячее положение — укрепляет мышцы кора и шеи.' },
+  { title: 'Игра «ку-ку»', tag: 'эмоции', body: 'Закрывайте лицо руками или тканью и открывайте со словом «ку-ку» — начинает формировать понимание постоянства объектов.' },
+  { title: 'Массаж стоп и ладошек', tag: 'сенсорика', body: 'Лёгкий массаж перед сном — успокаивает и развивает тактильное восприятие.' },
+];
+
+const ENGLISH_LINKS = [
+  { name: 'Оранжевый плейлист — основной курс', url: 'https://www.youtube.com/playlist?list=PLD6SPjEPomaustGSgYNsn3V62BTQeH85X', desc: 'Английский с нуля до Advanced, самый востребованный курс канала — начинайте с него.' },
+  { name: 'Золотой плейлист — бесплатный репетитор', url: 'https://www.youtube.com/playlist?list=PLTj1fjYSNC_rtCsA7tpZ-uQ3QH50E8HxW', desc: 'Самый подробный и лёгкий вариант с нуля — можно использовать как дополнение к оранжевому.' },
+];
+
+const ENGLISH_STAGES = [
+  'Золотой плейлист (основы)',
+  'Оранжевый плейлист, часть 1',
+  'Оранжевый плейлист, часть 2',
+  'Сапфировый / изумрудный (лексика и произношение)',
+  'Синий плейлист (продвинутый уровень)',
+];
+
+/* ============ STATE ============ */
+let currentDate = new Date();
+let dayData = null;
+let selectedCat = 'baby';
+let activeTab = 'schedule';
+let recipeSubtab = 'me';
+let englishStages = [];
+let vocabWords = [];
+
+/* ============ HELPERS ============ */
+function fmtKey(d) { return d.toISOString().slice(0,10); }
+function fmtLabel(d) {
+  const days = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  return `${d.getDate()} ${months[d.getMonth()]}, ${days[d.getDay()]}`;
+}
+function isToday(d) { return fmtKey(d) === fmtKey(new Date()); }
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+function checkSvg() {
+  return `<svg viewBox="0 0 16 16" fill="none"><path d="M3 8L6.5 11.5L13 4" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ============ SCHEDULE DATA ============ */
+function defaultDayData() {
+  return {
+    notes: '',
+    items: DEFAULT_SCHEDULE.map((s, i) => ({
+      id: 'item_' + i + '_' + Date.now() + Math.random().toString(36).slice(2,6),
+      time: s.time, label: s.label, cat: s.cat, done: false
+    }))
+  };
+}
+async function loadDay(date) {
+  const key = 'schedule:' + fmtKey(date);
+  try {
+    const res = await window.storage.get(key, false);
+    dayData = res ? JSON.parse(res.value) : defaultDayData();
+  } catch (e) { dayData = defaultDayData(); }
+  render();
+}
+async function saveDay() {
+  const key = 'schedule:' + fmtKey(currentDate);
+  try { await window.storage.set(key, JSON.stringify(dayData), false); }
+  catch (e) { console.error('Ошибка сохранения', e); }
+}
+function toggleItem(id) {
+  const item = dayData.items.find(i => i.id === id);
+  if (item) item.done = !item.done;
+  saveDay(); render();
+}
+function deleteItem(id) {
+  dayData.items = dayData.items.filter(i => i.id !== id);
+  saveDay(); render();
+}
+function addItem() {
+  const timeInput = document.getElementById('new-time');
+  const labelInput = document.getElementById('new-label');
+  const time = timeInput.value || '00:00';
+  const label = labelInput.value.trim();
+  if (!label) return;
+  dayData.items.push({ id: 'item_' + Date.now() + Math.random().toString(36).slice(2,6), time, label, cat: selectedCat, done: false });
+  labelInput.value = '';
+  saveDay(); render();
+}
+function selectCat(key) { selectedCat = key; render(); }
+function changeDate(delta) { currentDate.setDate(currentDate.getDate() + delta); loadDay(new Date(currentDate)); }
+function computeProgress() {
+  const total = dayData.items.length;
+  const done = dayData.items.filter(i => i.done).length;
+  return { total, done, pct: total ? Math.round(done/total*100) : 0 };
+}
+function ringSvg(pct) {
+  const r = 26, c = 2 * Math.PI * r;
+  const offset = c - (pct/100) * c;
+  return `<svg width="58" height="58" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="${r}" fill="none" stroke="#DCE0D6" stroke-width="7"/>
+    <circle cx="32" cy="32" r="${r}" fill="none" stroke="#4E7D6D" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 32 32)"/>
+    <text x="32" y="37" text-anchor="middle" font-family="Manrope" font-size="14" font-weight="700" fill="#33564A">${pct}%</text>
+  </svg>`;
+}
+
+/* ============ ENGLISH DATA (stages + vocab persisted) ============ */
+async function loadEnglishData() {
+  try {
+    const res = await window.storage.get('english:stages', false);
+    englishStages = res ? JSON.parse(res.value) : ENGLISH_STAGES.map(() => false);
+  } catch (e) { englishStages = ENGLISH_STAGES.map(() => false); }
+  try {
+    const res2 = await window.storage.get('english:vocab', false);
+    vocabWords = res2 ? JSON.parse(res2.value) : [];
+  } catch (e) { vocabWords = []; }
+}
+async function saveEnglishStages() {
+  try { await window.storage.set('english:stages', JSON.stringify(englishStages), false); } catch(e) {}
+}
+async function saveVocab() {
+  try { await window.storage.set('english:vocab', JSON.stringify(vocabWords), false); } catch(e) {}
+}
+function toggleStage(i) { englishStages[i] = !englishStages[i]; saveEnglishStages(); render(); }
+function addVocab() {
+  const inp = document.getElementById('vocab-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  vocabWords.push({ id: Date.now() + '', word: val });
+  inp.value = '';
+  saveVocab(); render();
+}
+function deleteVocab(id) {
+  vocabWords = vocabWords.filter(w => w.id !== id);
+  saveVocab(); render();
+}
+
+/* ============ TABS ============ */
+function switchTab(tab) { activeTab = tab; render(); }
+function switchRecipeSubtab(sub) { recipeSubtab = sub; render(); }
+function toggleAcc(el) { el.classList.toggle('open'); }
+
+/* ============ RENDER ============ */
+function renderScheduleTab() {
+  const prog = computeProgress();
+  const sorted = [...dayData.items].sort((a,b) => a.time.localeCompare(b.time));
+  return `
+    <div class="date-nav">
+      <button onclick="changeDate(-1)" aria-label="Предыдущий день">&#8592;</button>
+      <div class="date-label">${fmtLabel(currentDate)}${isToday(currentDate) ? '<span class="today-tag">Сегодня</span>' : ''}</div>
+      <button onclick="changeDate(1)" aria-label="Следующий день">&#8594;</button>
+    </div>
+    <div class="progress-ring-wrap">
+      ${ringSvg(prog.pct)}
+      <div class="progress-text">
+        <div class="big">${prog.done} из ${prog.total} сделано</div>
+        <div class="small">${prog.pct === 100 && prog.total > 0 ? 'Прекрасный день! ✨' : 'Отмечайте по ходу — расписание гибкое'}</div>
+      </div>
+    </div>
+    <div class="legend">${CATEGORIES.map(c => `<div class="legend-item"><span class="legend-dot" style="background:${c.color}"></span>${c.title}</div>`).join('')}</div>
+    <div class="timeline">
+      ${sorted.length === 0 ? '<div class="empty-msg">Пока пусто — добавьте первый пункт ниже</div>' : ''}
+      ${sorted.map(item => {
+        const cat = catByKey(item.cat);
+        return `<div class="slot">
+          <div class="slot-time ${item.done ? 'done-time' : ''}">${item.time}</div>
+          <div class="slot-line"><div class="slot-dot" style="background:${cat.color}"></div></div>
+          <div class="slot-card ${item.done ? 'done' : ''}" onclick="toggleItem('${item.id}')">
+            <div class="checkbox">${checkSvg()}</div>
+            <div class="item-body"><div class="item-label">${escapeHtml(item.label)}</div><div class="item-cat">${cat.title}</div></div>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}')">✕</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="add-panel">
+      <div class="add-panel-title">Добавить пункт</div>
+      <div class="cat-select">
+        ${CATEGORIES.map(c => `<div class="cat-chip ${selectedCat === c.key ? 'active' : ''}" style="${selectedCat === c.key ? 'background:'+c.color+';border-color:'+c.color : ''}" onclick="selectCat('${c.key}')"><span class="dot" style="background:${selectedCat === c.key ? '#fff' : c.color}"></span>${c.title}</div>`).join('')}
+      </div>
+      <div class="add-grid">
+        <input type="time" id="new-time" value="12:00">
+        <input type="text" id="new-label" placeholder="Например: Вторая прогулка" onkeydown="if(event.key==='Enter') addItem();">
+      </div>
+      <button class="submit" onclick="addItem()">Добавить в расписание</button>
+    </div>
+    <div class="notes-box">
+      <div class="notes-box-title">Заметки на завтра</div>
+      <textarea placeholder="Что не забыть, идеи, мысли…" id="notes-input">${escapeHtml(dayData.notes)}</textarea>
+    </div>
+    <div class="status-msg">Данные сохраняются автоматически на этом устройстве</div>
+  `;
+}
+
+function renderRecipeCard(day, isOpen) {
+  return `<div class="acc-card${isOpen ? ' open' : ''}">
+    <div class="acc-head" onclick="toggleAcc(this.parentElement)">
+      <div><div class="acc-title">${day.day}</div>${day.tag ? `<div class="acc-sub">${day.tag}</div>` : ''}</div>
+      <div class="acc-arrow">▾</div>
+    </div>
+    <div class="acc-body">
+      ${day.items.map(it => `<div style="margin-bottom:10px;"><b>${escapeHtml(it.title)}</b>${it.body ? '<br>' + escapeHtml(it.body) : ''}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderRecipesTab() {
+  const list = recipeSubtab === 'me' ? RECIPES_ME : RECIPES_HUSBAND;
+  return `
+    <div class="section-lead">${recipeSubtab === 'me' ? 'Ваше меню на 7 дней — простые рецепты без рыбы, максимум 15-20 минут готовки.' : 'Узбекская кухня для мужа — сытные высококалорийные ужины на 4-6 порций.'}</div>
+    <div class="subtabs">
+      <button class="subtab-btn ${recipeSubtab === 'me' ? 'active' : ''}" onclick="switchRecipeSubtab('me')">Моё меню</button>
+      <button class="subtab-btn ${recipeSubtab === 'husband' ? 'active' : ''}" onclick="switchRecipeSubtab('husband')">Ужины для мужа</button>
+    </div>
+    ${list.map((d,i) => renderRecipeCard(d, i===0)).join('')}
+  `;
+}
+
+function renderExercisesTab() {
+  return `
+    <div class="section-lead">Все упражнения безопасны при диастазе — ничего не выпячивает живот наружу. Начинайте с дыхания, оно фундамент.</div>
+    ${EXERCISES.map((ex,i) => `<div class="acc-card${i===0?' open':''}">
+      <div class="acc-head" onclick="toggleAcc(this.parentElement)">
+        <div class="acc-title">${escapeHtml(ex.title)}${ex.tag ? `<span class="badge">${ex.tag}</span>` : ''}</div>
+        <div class="acc-arrow">▾</div>
+      </div>
+      <div class="acc-body">${escapeHtml(ex.body)}</div>
+    </div>`).join('')}
+    <div class="subhead">Чего избегать</div>
+    <div class="acc-card open"><div class="acc-body" style="padding-top:14px;"><ul>${EXERCISES_AVOID.map(a => `<li>${escapeHtml(a)}</li>`).join('')}</ul></div></div>
+  `;
+}
+
+function renderBabyTab() {
+  return `
+    <div class="section-lead">Развивающие занятия для малыша 5 месяцев — короткие, можно вписать между делами.</div>
+    ${BABY_ACTIVITIES.map((a,i) => `<div class="acc-card${i===0?' open':''}">
+      <div class="acc-head" onclick="toggleAcc(this.parentElement)">
+        <div class="acc-title">${escapeHtml(a.title)}${a.tag ? `<span class="badge gold">${a.tag}</span>` : ''}</div>
+        <div class="acc-arrow">▾</div>
+      </div>
+      <div class="acc-body">${escapeHtml(a.body)}</div>
+    </div>`).join('')}
+  `;
+}
+
+function renderEnglishTab() {
+  return `
+    <div class="section-lead">Курс Александра Бебриса — плейлисты канала «Английский язык по плейлистам».</div>
+    ${ENGLISH_LINKS.map(l => `<div class="link-card">
+      <div class="name">${escapeHtml(l.name)}</div>
+      <div class="desc">${escapeHtml(l.desc)}</div>
+      <div class="desc" style="margin-top:6px;word-break:break-all;color:var(--teal);">${l.url}</div>
+    </div>`).join('')}
+
+    <div class="subhead">Мой прогресс по этапам</div>
+    ${ENGLISH_STAGES.map((s,i) => `<div class="stage-row ${englishStages[i] ? 'done' : ''}" onclick="toggleStage(${i})">
+      <div class="stage-check">${checkSvg()}</div>
+      <div class="stage-name">${escapeHtml(s)}</div>
+    </div>`).join('')}
+
+    <div class="subhead">Словарик новых слов</div>
+    <div class="vocab-row">
+      <input type="text" id="vocab-input" placeholder="Новое слово или фраза…" onkeydown="if(event.key==='Enter') addVocab();">
+      <button onclick="addVocab()">+</button>
+    </div>
+    ${vocabWords.length === 0 ? '<div class="empty-msg">Пока пусто — добавьте первое слово</div>' : ''}
+    ${vocabWords.map(w => `<div class="vocab-item"><span>${escapeHtml(w.word)}</span><button class="del" onclick="deleteVocab('${w.id}')">✕</button></div>`).join('')}
+  `;
+}
+
+const TABS = [
+  { key: 'schedule', label: 'Расписание' },
+  { key: 'recipes', label: 'Рецепты' },
+  { key: 'exercises', label: 'Диастаз' },
+  { key: 'baby', label: 'Малыш' },
+  { key: 'english', label: 'Английский' },
+];
+
+function render() {
+  const app = document.getElementById('app');
+  let content = '';
+  if (activeTab === 'schedule') content = renderScheduleTab();
+  else if (activeTab === 'recipes') content = renderRecipesTab();
+  else if (activeTab === 'exercises') content = renderExercisesTab();
+  else if (activeTab === 'baby') content = renderBabyTab();
+  else if (activeTab === 'english') content = renderEnglishTab();
+
+  app.innerHTML = `
+    <header>
+      <div class="eyebrow">Мой день</div>
+      <h1>Всё под рукой</h1>
+    </header>
+    <div class="tabbar">
+      ${TABS.map(t => `<button class="tab-btn ${activeTab === t.key ? 'active' : ''}" onclick="switchTab('${t.key}')">${t.label}</button>`).join('')}
+    </div>
+    <div class="tab-panel active">${content}</div>
+  `;
+
+  if (activeTab === 'schedule') {
+    const notesInput = document.getElementById('notes-input');
+    if (notesInput) {
+      let notesTimeout;
+      notesInput.addEventListener('input', (e) => {
+        clearTimeout(notesTimeout);
+        const val = e.target.value;
+        notesTimeout = setTimeout(() => { dayData.notes = val; saveDay(); }, 400);
+      });
+    }
+  }
+}
+
+/* ============ INIT ============ */
+(async function init() {
+  await loadEnglishData();
+  await loadDay(currentDate);
+})();
+</script>
+</body>
+</html>
